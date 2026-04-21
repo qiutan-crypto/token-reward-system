@@ -6,16 +6,20 @@ export default async function ReportsPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
-
-  const { data: children } = await supabase.from('children').select('*').eq('status', 'active').order('name')
-
+  
+  const { data: children } = await supabase
+    .from('children')
+    .select('*')
+    .eq('status', 'active')
+    .order('name')
+  
   // Monthly summary per child
   const { data: monthlySummary } = await supabase
     .from('token_ledger')
     .select('child_id, year_month, entry_type, token_amount, children(name), behavior_rules(title), note, occurred_at')
     .order('occurred_at', { ascending: false })
     .limit(200)
-
+  
   // Group by child and month
   const byChildMonth: Record<string, Record<string, { earned: number, spent: number, entries: unknown[] }>> = {}
   for (const entry of (monthlySummary || [])) {
@@ -27,7 +31,7 @@ export default async function ReportsPage() {
     if (entry.entry_type === 'redeem') byChildMonth[childName][ym].spent += Math.abs(entry.token_amount)
     byChildMonth[childName][ym].entries.push(entry)
   }
-
+  
   return (
     <div className="min-h-screen bg-gray-50">
       <nav className="bg-white shadow-sm border-b">
@@ -36,17 +40,14 @@ export default async function ReportsPage() {
           <span className="font-semibold text-gray-800">月度报表</span>
         </div>
       </nav>
-
       <div className="max-w-5xl mx-auto px-4 py-8">
         <h1 className="text-2xl font-bold text-gray-900 mb-8">Token 流水记录与月度报表</h1>
-
         {Object.keys(byChildMonth).length === 0 && (
           <div className="text-center py-16 text-gray-400">
             <div className="text-4xl mb-2">📊</div>
             <p>还没有记录，先给孩子发放 Token 吧！</p>
           </div>
         )}
-
         {Object.entries(byChildMonth).map(([childName, months]) => (
           <div key={childName} className="mb-10">
             <h2 className="text-xl font-bold text-purple-700 mb-4">👶 {childName}</h2>
@@ -74,7 +75,7 @@ export default async function ReportsPage() {
                     <div key={i} className="flex items-center justify-between py-1.5 border-b last:border-0">
                       <div>
                         <div className="text-sm text-gray-700">
-                          {entry.behavior_rules?.title ?? entry.note ?? (兑换奖品 === entry.entry_type ? '兑换奖品' : '手动调整')}
+                          {entry.behavior_rules?.title ?? entry.note ?? (entry.entry_type === 'redeem' ? '兑换奖品' : '手动调整')}
                         </div>
                         <div className="text-xs text-gray-400">{new Date(entry.occurred_at).toLocaleDateString('zh-CN')}</div>
                       </div>
