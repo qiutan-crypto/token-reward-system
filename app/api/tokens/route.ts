@@ -14,31 +14,29 @@ export async function POST(request: Request) {
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const body = await request.json()
-  const { kid_id, behavior_rule_id, token_amount, note } = body
+  const { child_id, rule_id, token_amount, note } = body
 
-  // Get behavior rule if provided
   let amount = token_amount
-  let ruleId = behavior_rule_id
-
-  if (behavior_rule_id && !token_amount) {
+  if (rule_id && !token_amount) {
     const { data: rule } = await supabase
       .from('behavior_rules')
       .select('token_value')
-      .eq('id', behavior_rule_id)
+      .eq('id', rule_id)
       .single()
     if (rule) amount = rule.token_value
   }
 
   const { data, error } = await supabase
-    .from('token_entries')
+    .from('token_ledger')
     .insert({
-      kid_id,
-      parent_id: user.id,
-      behavior_rule_id: ruleId || null,
+      child_id,
+      awarded_by: user.id,
+      rule_id: rule_id || null,
       token_amount: amount,
       entry_type: amount > 0 ? 'earn' : 'spend',
       note: note || null,
-      occurred_at: new Date().toISOString()
+      occurred_at: new Date().toISOString(),
+      year_month: new Date().toISOString().slice(0, 7),
     })
     .select()
     .single()
@@ -56,17 +54,17 @@ export async function GET(request: Request) {
   )
 
   const { searchParams } = new URL(request.url)
-  const kid_id = searchParams.get('kid_id')
+  const child_id = searchParams.get('child_id')
 
-  if (!kid_id) return NextResponse.json({ error: 'kid_id required' }, { status: 400 })
+  if (!child_id) return NextResponse.json({ error: 'child_id required' }, { status: 400 })
 
   const { data: balance } = await supabase
-    .rpc('get_token_balance', { p_kid_id: kid_id })
+    .rpc('get_token_balance', { p_kid_id: child_id })
 
   const { data: entries, error } = await supabase
-    .from('token_entries')
+    .from('token_ledger')
     .select('*, behavior_rules(title)')
-    .eq('kid_id', kid_id)
+    .eq('child_id', child_id)
     .order('occurred_at', { ascending: false })
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })

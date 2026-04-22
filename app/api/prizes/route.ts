@@ -11,7 +11,7 @@ export async function GET() {
   )
 
   const { data, error } = await supabase
-    .from('prizes')
+    .from('reward_catalog')
     .select('*')
     .order('token_cost')
 
@@ -32,7 +32,7 @@ export async function POST(request: Request) {
 
   const body = await request.json()
   const { data, error } = await supabase
-    .from('prizes')
+    .from('reward_catalog')
     .insert(body)
     .select()
     .single()
@@ -55,7 +55,7 @@ export async function PUT(request: Request) {
   const body = await request.json()
   const { id, ...updates } = body
   const { data, error } = await supabase
-    .from('prizes')
+    .from('reward_catalog')
     .update(updates)
     .eq('id', id)
     .select()
@@ -77,7 +77,7 @@ export async function DELETE(request: Request) {
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const { id } = await request.json()
-  const { error } = await supabase.from('prizes').delete().eq('id', id)
+  const { error } = await supabase.from('reward_catalog').delete().eq('id', id)
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ success: true })
 }

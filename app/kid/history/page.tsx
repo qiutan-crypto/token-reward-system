@@ -7,6 +7,7 @@ export default function KidHistoryPage() {
   const [entries, setEntries] = useState<TokenLedger[]>([])
   const [balance, setBalance] = useState(0)
   const [loading, setLoading] = useState(true)
+  const [noRecord, setNoRecord] = useState(false)
 
   useEffect(() => {
     const fetchHistory = async () => {
@@ -14,14 +15,22 @@ export default function KidHistoryPage() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return
 
+      const { data: childRecord } = await supabase
+        .from('children')
+        .select('id')
+        .eq('user_id', user.id)
+        .single()
+
+      if (!childRecord) { setNoRecord(true); setLoading(false); return }
+
       const [{ data: entriesData }, { data: balanceData }] = await Promise.all([
         supabase
           .from('token_ledger')
           .select('*, behavior_rules(title)')
-          .eq('child_id', user.id)
+          .eq('child_id', childRecord.id)
           .order('occurred_at', { ascending: false })
           .limit(50),
-        supabase.rpc('get_token_balance', { p_kid_id: user.id })
+        supabase.rpc('get_token_balance', { p_kid_id: childRecord.id })
       ])
 
       setEntries(entriesData || [])
@@ -35,6 +44,15 @@ export default function KidHistoryPage() {
   if (loading) return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-100 to-cyan-100">
       <div className="text-2xl text-blue-500">加载中...</div>
+    </div>
+  )
+
+  if (noRecord) return (
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-100 to-cyan-100">
+      <div className="text-center text-gray-500">
+        <div className="text-5xl mb-4">👋</div>
+        <p>请让家长先添加你的账号</p>
+      </div>
     </div>
   )
 

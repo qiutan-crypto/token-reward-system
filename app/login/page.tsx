@@ -7,6 +7,7 @@ import { createClient } from '@/lib/supabase/client'
 export default function LoginPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [name, setName] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [isRegister, setIsRegister] = useState(false)
@@ -20,7 +21,10 @@ export default function LoginPage() {
 
     try {
       if (isRegister) {
-        const { error } = await supabase.auth.signUp({ email, password })
+        const { error } = await supabase.auth.signUp({
+          email, password,
+          options: { data: { name: name || email.split('@')[0], role: 'parent' } }
+        })
         if (error) throw error
         setError('注册成功！请查收邮件确认。')
       } else {
@@ -46,8 +50,20 @@ export default function LoginPage() {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
+          {isRegister && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">姓名</label>
+              <input
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                placeholder="你的名字"
+              />
+            </div>
+          )}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">邮箖</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">邮箱</label>
             <input
               type="email"
               value={email}

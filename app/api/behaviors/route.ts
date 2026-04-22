@@ -13,7 +13,7 @@ export async function GET() {
   const { data, error } = await supabase
     .from('behavior_rules')
     .select('*')
-    .eq('is_active', true)
+    .eq('active', true)
     .order('category')
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
