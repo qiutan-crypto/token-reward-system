@@ -26,7 +26,15 @@ export async function middleware(request: NextRequest) {
   )
 
   const { data: { user } } = await supabase.auth.getUser()
-  const { pathname } = request.nextUrl
+  const { pathname, search } = request.nextUrl
+
+  // Treat a value as a safe internal redirect path: must start with `/` and not
+  // be a protocol-relative URL (`//evil.com`) or a javascript: scheme. Returns
+  // the value if safe, otherwise null.
+  const safeNext = (raw: string | null): string | null => {
+    if (!raw || !raw.startsWith('/') || raw.startsWith('//') || raw.includes(':')) return null
+    return raw
+  }
 
   // Public routes
   if (pathname.startsWith('/login') || pathname.startsWith('/register') || pathname === '/' || pathname === '/kid/login' || pathname.startsWith('/api/children/lookup')) {
@@ -37,7 +45,16 @@ export async function middleware(request: NextRequest) {
         .eq('id', user.id)
         .single()
       const url = request.nextUrl.clone()
-      url.pathname = profile?.role === 'kid' ? '/kid' : '/parent/dashboard'
+      // If the login page was reached with ?next=<safe path>, send the user
+      // to that page instead of the role default. Lets bookmarks like
+      // /parent/mobile resolve to the right page after login.
+      const next = safeNext(request.nextUrl.searchParams.get('next'))
+      if (next) {
+        url.pathname = next
+        url.search = ''
+      } else {
+        url.pathname = profile?.role === 'kid' ? '/kid' : '/parent/dashboard'
+      }
       return NextResponse.redirect(url)
     }
     return supabaseResponse
@@ -47,6 +64,8 @@ export async function middleware(request: NextRequest) {
   if (!user) {
     const url = request.nextUrl.clone()
     url.pathname = '/login'
+    // Preserve the originally requested path so the login page can return there.
+    url.searchParams.set('next', pathname + search)
     return NextResponse.redirect(url)
   }
 

@@ -1,10 +1,20 @@
 'use client'
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, Suspense } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 
+// Wrapper required by Next.js 14: useSearchParams() must be inside a Suspense
+// boundary when the page is statically rendered.
 export default function LoginPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center text-gray-400">加载中…</div>}>
+      <LoginPageInner />
+    </Suspense>
+  )
+}
+
+function LoginPageInner() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [name, setName] = useState('')
@@ -12,7 +22,17 @@ export default function LoginPage() {
   const [error, setError] = useState('')
   const [isRegister, setIsRegister] = useState(false)
   const router = useRouter()
+  const searchParams = useSearchParams()
   const supabase = createClient()
+
+  // Honour ?next=<safe path> so bookmarks like /parent/mobile land on the
+  // requested page after login. Reject anything that isn't an internal path
+  // (must start with '/', not '//', no scheme).
+  const nextRaw = searchParams.get('next')
+  const nextPath =
+    nextRaw && nextRaw.startsWith('/') && !nextRaw.startsWith('//') && !nextRaw.includes(':')
+      ? nextRaw
+      : '/parent/dashboard'
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -30,7 +50,7 @@ export default function LoginPage() {
       } else {
         const { error } = await supabase.auth.signInWithPassword({ email, password })
         if (error) throw error
-        router.push('/parent/dashboard')
+        router.push(nextPath)
         router.refresh()
       }
     } catch (err: unknown) {
