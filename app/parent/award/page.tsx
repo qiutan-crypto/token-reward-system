@@ -1,12 +1,22 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
 import type { Child, BehaviorRule } from '@/types'
 
+// Wrapper required by Next.js 14: useSearchParams() must be inside a Suspense boundary
+// when the page is statically rendered.
 export default function AwardPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center text-gray-400">加载中…</div>}>
+      <AwardPageInner />
+    </Suspense>
+  )
+}
+
+function AwardPageInner() {
   const [children, setChildren] = useState<Child[]>([])
   const [rules, setRules] = useState<BehaviorRule[]>([])
   const [selectedChild, setSelectedChild] = useState('')
