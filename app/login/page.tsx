@@ -99,13 +99,18 @@ export default function LoginPage() {
           </button>
         </form>
 
-        <div className="mt-4 text-center">
+        <div className="mt-4 text-center space-y-2">
           <button
             onClick={() => setIsRegister(!isRegister)}
             className="text-purple-600 hover:underline text-sm"
           >
             {isRegister ? '已有账号？登录' : '没有账号？注册'}
           </button>
+          <div>
+            <a href="/kid/login" className="text-orange-500 hover:underline text-sm">
+              👶 孩子登录入口
+            </a>
+          </div>
         </div>
       </div>
     </div>

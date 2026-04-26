@@ -29,7 +29,7 @@ export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
 
   // Public routes
-  if (pathname.startsWith('/login') || pathname.startsWith('/register') || pathname === '/') {
+  if (pathname.startsWith('/login') || pathname.startsWith('/register') || pathname === '/' || pathname === '/kid/login' || pathname.startsWith('/api/children/lookup')) {
     if (user) {
       const { data: profile } = await supabase
         .from('profiles')

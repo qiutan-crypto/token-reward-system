@@ -16,10 +16,19 @@ export default function KidStorePage() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return
       const [{ data: prizesData }, { data: balanceData }] = await Promise.all([
-        supabase.from('reward_catalog').select('*').eq('active', true).order('token_cost'),
+        supabase.from('reward_catalog').select('*').eq('active', true),
         supabase.rpc('get_token_balance', { p_kid_id: user.id })
       ])
-      setPrizes(prizesData || [])
+      const stored: string[] = JSON.parse(localStorage.getItem('reward_sort_order') || '[]')
+      const raw = prizesData || []
+      if (stored.length) {
+        const map = Object.fromEntries(raw.map((r: RewardCatalog) => [r.id, r]))
+        const ordered = stored.filter((id: string) => map[id]).map((id: string) => map[id])
+        const rest = raw.filter((r: RewardCatalog) => !stored.includes(r.id))
+        setPrizes([...ordered, ...rest])
+      } else {
+        setPrizes(raw)
+      }
       setBalance(balanceData || 0)
       setLoading(false)
     }
@@ -75,7 +84,7 @@ export default function KidStorePage() {
           {prizes.map(prize => (
             <div key={prize.id} className="bg-white rounded-2xl shadow p-4 flex flex-col">
               {prize.image_url && (
-                <img src={prize.image_url} alt={prize.title} className="w-full h-32 object-cover rounded-xl mb-3" />
+                <img src={prize.image_url} alt={prize.title} className="w-full max-h-40 object-contain mb-3 mix-blend-multiply" />
               )}
               {!prize.image_url && (
                 <div className="w-full h-32 bg-gradient-to-br from-purple-100 to-pink-100 rounded-xl mb-3 flex items-center justify-center text-5xl">

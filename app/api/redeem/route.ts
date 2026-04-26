@@ -59,7 +59,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: '兑换失败: ' + entryError.message }, { status: 500 })
   }
 
-  await supabase
+  const { error: redeemError } = await supabase
     .from('reward_redemptions')
     .insert({
       child_id,
@@ -68,6 +68,11 @@ export async function POST(request: Request) {
       status: 'pending',
       redeemed_at: new Date().toISOString(),
     })
+
+  if (redeemError) {
+    console.error('reward_redemptions insert error:', redeemError)
+    return NextResponse.json({ error: '兑换记录写入失败: ' + redeemError.message }, { status: 500 })
+  }
 
   return NextResponse.json({ success: true, prize_name: reward.title, tokens_spent: reward.token_cost })
 }

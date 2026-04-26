@@ -37,11 +37,15 @@ export default function BehaviorsPage() {
     if (!title || !tokenValue) { setError('请填写必填项'); return }
     setLoading(true); setError('')
     const payload = { title, description: description || null, category: category || null, token_value: parseInt(tokenValue), active: true }
+    let err
     if (editingRule) {
-      await supabase.from('behavior_rules').update(payload).eq('id', editingRule.id)
+      const { error } = await supabase.from('behavior_rules').update(payload).eq('id', editingRule.id)
+      err = error
     } else {
-      await supabase.from('behavior_rules').insert([payload])
+      const { error } = await supabase.from('behavior_rules').insert([payload])
+      err = error
     }
+    if (err) { setError('保存失败：' + err.message); setLoading(false); return }
     await loadRules(); resetForm(); setLoading(false)
   }
 

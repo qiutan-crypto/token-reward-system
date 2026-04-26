@@ -104,7 +104,6 @@ export default function AwardPage() {
                         : 'border-gray-200 hover:border-purple-300'
                     }`}
                   >
-                    <div className="text-2xl mb-1">👶</div>
                     <div className="text-sm font-medium">{child.name}</div>
                   </button>
                 ))}
