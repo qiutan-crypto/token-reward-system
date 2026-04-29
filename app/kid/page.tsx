@@ -1,6 +1,7 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, Suspense } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import type { RewardCatalog } from '@/types'
 import GoldCoin from '@/components/GoldCoin'
@@ -50,7 +51,17 @@ interface Coin {
   startOffsetX: number  // px from center where the coin spawns (rain spreads wide)
 }
 
+// Suspense wrapper required because KidHomePageInner uses useSearchParams()
 export default function KidHomePage() {
+  return (
+    <Suspense fallback={null}>
+      <KidHomePageInner />
+    </Suspense>
+  )
+}
+
+function KidHomePageInner() {
+  const searchParams = useSearchParams()
   const [phase, setPhase] = useState<'rain' | 'coin' | 'store' | 'history' | 'rules'>('rain')
   const [balance, setBalance] = useState(0)
   const [kidName, setKidName] = useState('')
@@ -131,7 +142,8 @@ export default function KidHomePage() {
   const [redeeming, setRedeeming] = useState<string | null>(null)
   const [message, setMessage] = useState('')
   const [childId, setChildId] = useState('')
-  const [dailyBonus, setDailyBonus] = useState(false)   // shows celebratory toast for daily login bonus
+  // Show daily bonus celebration if the login page passed ?bonus=1
+  const [dailyBonus, setDailyBonus] = useState(() => searchParams.get('bonus') === '1')
 
   useEffect(() => {
     const load = async () => {
@@ -147,14 +159,6 @@ export default function KidHomePage() {
       if (profile) setKidName(profile.name)
       if (childRecord) {
         setChildId(childRecord.id)
-
-        // Try to claim today's daily-login bonus (server enforces once-per-day).
-        // Do this BEFORE reading the balance so the bonus is reflected immediately.
-        try {
-          const res = await fetch('/api/daily-login', { method: 'POST' })
-          const data = await res.json()
-          if (data?.awarded) setDailyBonus(true)
-        } catch { /* network error — silently skip; tomorrow they can try again */ }
 
         const { data: bal } = await supabase.rpc('get_token_balance', { p_kid_id: childRecord.id })
         setBalance(bal || 0)

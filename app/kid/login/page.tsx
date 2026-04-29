@@ -37,7 +37,17 @@ export default function KidLoginPage() {
     const supabase = createClient()
     const { error } = await supabase.auth.signInWithPassword({ email, password: pin })
     if (error) { setError('PIN 码错误，请重试'); setLoading(false); return }
-    router.push('/kid')
+
+    // Claim the daily login bonus right after auth — session cookies are set now.
+    // Pass ?bonus=1 to the kid home page so it can show the celebration modal.
+    let bonusParam = ''
+    try {
+      const res = await fetch('/api/daily-login', { method: 'POST' })
+      const data = await res.json()
+      if (data?.awarded) bonusParam = '?bonus=1'
+    } catch { /* network error — skip bonus silently */ }
+
+    router.push('/kid' + bonusParam)
     router.refresh()
   }
 
