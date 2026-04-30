@@ -35,14 +35,20 @@ export default function KidLoginPage() {
     setLoading(true)
     setError('')
     const supabase = createClient()
-    const { error } = await supabase.auth.signInWithPassword({ email, password: pin })
+    const { data: authData, error } = await supabase.auth.signInWithPassword({ email, password: pin })
     if (error) { setError('PIN 码错误，请重试'); setLoading(false); return }
 
-    // Claim the daily login bonus right after auth — session cookies are set now.
-    // Pass ?bonus=1 to the kid home page so it can show the celebration modal.
+    // Claim the daily login bonus right after auth.
+    // Pass the access token directly in the Authorization header — cookies may
+    // not be flushed to the browser yet at this point, so cookie-based auth
+    // on the server would return 401. Using the token avoids that race condition.
     let bonusParam = ''
     try {
-      const res = await fetch('/api/daily-login', { method: 'POST' })
+      const token = authData.session?.access_token ?? ''
+      const res = await fetch('/api/daily-login', {
+        method: 'POST',
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      })
       const data = await res.json()
       if (data?.awarded) bonusParam = '?bonus=1'
     } catch { /* network error — skip bonus silently */ }

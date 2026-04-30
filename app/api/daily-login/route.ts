@@ -1,18 +1,39 @@
 import { createServerClient } from '@supabase/ssr'
+import { createClient } from '@supabase/supabase-js'
 import { cookies } from 'next/headers'
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 
 // POST /api/daily-login
 // Awards 1 token per day to the kid for logging in.
 // Idempotent: calling multiple times in a single day returns the same result
 // (the bonus is granted at most once per local day).
-export async function POST() {
-  const cookieStore = await cookies()
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    { cookies: { getAll() { return cookieStore.getAll() }, setAll() {} } }
-  )
+//
+// Auth strategy: accepts either
+//   a) Authorization: Bearer <access_token>  — used right after login before
+//      cookies are flushed to the browser (avoids the cookie timing race)
+//   b) Supabase session cookie — used for subsequent page-load calls
+export async function POST(request: NextRequest) {
+  const authHeader = request.headers.get('Authorization')
+
+  let supabase
+
+  if (authHeader?.startsWith('Bearer ')) {
+    // Token passed directly from the login page — most reliable path
+    const accessToken = authHeader.slice(7)
+    supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      { global: { headers: { Authorization: `Bearer ${accessToken}` } } }
+    )
+  } else {
+    // Cookie-based auth (normal page navigations)
+    const cookieStore = await cookies()
+    supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      { cookies: { getAll() { return cookieStore.getAll() }, setAll() {} } }
+    )
+  }
 
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
